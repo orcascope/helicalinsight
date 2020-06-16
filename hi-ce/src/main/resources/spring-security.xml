@@ -17,6 +17,7 @@
         <beans:property name="authenticationFailureHandler" ref="failureHandler"/>
         <beans:property name="authenticationSuccessHandler" ref="successHandler"/>
     </beans:bean>
+  
     <!-- JWT -->
     <beans:bean id="authenticationTokenFilterBean"
                 class="com.helicalinsight.externalauth.jwt.JwtAuthenticationFilter">
@@ -93,9 +94,9 @@
 
         <intercept-url pattern="/Print" access="hasAnyRole('ROLE_USER','ROLE_ADMIN')"/>
 
-        <intercept-url pattern="/DisplayChart" access="hasAnyRole('ROLE_USER','ROLE_ADMIN')"/>
+        <intercept-url pattern="/DisplayChart" access="hasAnyRole('PROJECT_USER', 'ROLE_USER','ROLE_ADMIN')"/>
 
-        <intercept-url pattern="/GetChart" access="hasAnyRole('ROLE_USER','ROLE_ADMIN')"/>
+        <intercept-url pattern="/GetChart" access="hasAnyRole('PROJECT_USER','ROLE_USER','ROLE_ADMIN')"/>
 
         <intercept-url pattern="/loginfailed.html" access="permitAll"/>
 
@@ -118,10 +119,6 @@
         <intercept-url pattern="/admin/roles/**" access="hasRole('ROLE_ADMIN')"/>
 
 
-
-
-
-
         <intercept-url pattern="/admin/profiles" access="hasRole('ROLE_ADMIN')"/>
 
         <intercept-url pattern="/admin" access="denyAll"/>
@@ -142,7 +139,7 @@
 
         <intercept-url pattern="/getSolutionResources*" access="hasAnyRole('ROLE_USER','ROLE_ADMIN')"/>
 
-        <intercept-url pattern="/getEFWSolution*" access="hasAnyRole('ROLE_USER','ROLE_ADMIN')"/>
+        <intercept-url pattern="/getEFWSolution*" access="hasAnyRole('PROJECT_USER','ROLE_USER','ROLE_ADMIN')"/>
 
         <intercept-url pattern="/executeDatasource*" access="hasAnyRole('ROLE_USER','ROLE_ADMIN')"/>
         <intercept-url pattern="/ce-report-create*" access="hasAnyRole('ROLE_USER','ROLE_ADMIN')"/>
@@ -150,7 +147,7 @@
 
         <intercept-url pattern="/datasource-*" access="hasAnyRole('ROLE_USER','ROLE_ADMIN')"/>
 
-        <intercept-url pattern="/visualizeData*" access="hasAnyRole('ROLE_USER','ROLE_ADMIN')"/>
+        <intercept-url pattern="/visualizeData*" access="hasAnyRole('PROJECT_USER','ROLE_USER','ROLE_ADMIN')"/>
 
         <intercept-url pattern="/exportData*" access="hasAnyRole('ROLE_USER','ROLE_ADMIN')"/>
 
@@ -158,11 +155,11 @@
 
         <intercept-url pattern="/updateEFWTemplate*" access="hasAnyRole('ROLE_USER','ROLE_ADMIN')"/>
 
-        <intercept-url pattern="/getExternalResource*" access="hasAnyRole('ROLE_USER','ROLE_ADMIN')"/>
+        <intercept-url pattern="/getExternalResource*" access="hasAnyRole('PROJECT_USER','ROLE_USER','ROLE_ADMIN')"/>
 
         <intercept-url pattern="/createDataSource*" access="hasAnyRole('ROLE_USER','ROLE_ADMIN')"/>
 
-        <intercept-url pattern="/getResources*" access="hasAnyRole('ROLE_USER','ROLE_ADMIN')"/>
+        <intercept-url pattern="/getResources*" access="hasAnyRole('PROJECT_USER','ROLE_USER','ROLE_ADMIN')"/>
 
         <intercept-url pattern="/listDataSources*" access="hasAnyRole('ROLE_USER','ROLE_ADMIN')"/>
 
