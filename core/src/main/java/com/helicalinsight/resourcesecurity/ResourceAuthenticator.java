@@ -34,12 +34,16 @@ import net.sf.json.JSONSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
-import java.io.File;
-import java.util.List;
+import javax.servlet.http.HttpSession;
+import java.io.*;
+import java.util.*;
 
 /**
  * Created by author on 31-07-2015.
@@ -48,6 +52,47 @@ import java.util.List;
  */
 @Component
 public class ResourceAuthenticator implements IResourceAuthenticator {
+
+    private Map<String, String> load_folder_security(){
+        InputStream in = ResourceAuthenticator.class.getResourceAsStream("/folder_permission.properties");
+        Properties config = new Properties();
+        Map<String, String> roleMap = new HashMap<String, String>();
+        logger.debug("load folder security property file");
+        try {
+            if (in != null) {
+                logger.debug("folder security properties "+ in.toString());
+                config.load(in);
+            } else {
+                throw new FileNotFoundException("property file folder_permission.properties not found in the classpath");
+            }
+
+            config.load(in);
+
+            for (String key : config.stringPropertyNames()) {
+                String value = config.getProperty(key);
+                roleMap.put(key, value);
+            }
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
+        return roleMap;
+    }
+
+    private Boolean checkRoleMap(String requested_directory, ArrayList<String> authList){
+        Map<String, String> roleMap = load_folder_security();
+        logger.debug("CheckroleMap "+ requested_directory+ " "+ authList.toString() +"rolemap wholeset  " +roleMap.toString()) ;
+        for (String roledir: roleMap.keySet()){
+            logger.debug("Iterate thru property file, for dir - "+ roledir +" " + requested_directory.contains(roledir) +" rolemap role "+ roleMap.get(roledir) );
+            if (requested_directory.contains(roledir)) {
+                logger.debug("match requested_directory on roledir");
+                if (!authList.contains(roleMap.get(roledir))){
+                    logger.debug("False sent for "+ roledir);
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 
     private static final Logger logger = LoggerFactory.getLogger(ResourceAuthenticator.class);
 
@@ -101,6 +146,25 @@ public class ResourceAuthenticator implements IResourceAuthenticator {
             throw new IllegalArgumentException("The url context is null.");
         }
 
+        //The below code extracts the user and his granted roles from the securityContext
+        HttpSession session = request.getSession(false);
+        SecurityContextImpl sci = (SecurityContextImpl) session.getAttribute("SPRING_SECURITY_CONTEXT");
+        Collection<? extends GrantedAuthority> Authlist = null;
+        ArrayList<String> authlist_string =  new ArrayList<String>();;
+        if (sci != null) {
+            logger.info("sci_toString "+ sci.toString());
+            Authentication Auth = sci.getAuthentication();
+            Authlist = Auth.getAuthorities();
+
+            Enumeration<String> reqparms = request.getParameterNames();
+            ArrayList<String> reqParmsList = Collections.list(reqparms);
+
+            for (GrantedAuthority role : Authlist) {
+                    authlist_string.add(String.valueOf(role));
+            }
+        }
+        //End code extracts the user and his granted roles from the securityContext
+
         Integer minimumPermissionRequired = urlContext.getPermission();
         //Reset directory as it it request scoped.
         resetSolutionDirectory();
@@ -112,6 +176,17 @@ public class ResourceAuthenticator implements IResourceAuthenticator {
             boolean optionalParameters = areOptionalParameters(urlContext.getParameters());
 
             if (minimumPermissionRequired != null) {//Default lookup
+
+                //if request has 'dir' parameter, verify the requested directory and the user's role and authenticate
+                //if not, then normal flow will happen
+                String requested_directory = request.getParameter("dir");
+                if (requested_directory !=  null) {
+                    Boolean result_checkRole =  checkRoleMap(requested_directory, authlist_string);
+                    logger.debug("result of check role permission " + result_checkRole);
+                    return result_checkRole;
+                }
+                //end code verifying requested directory.
+
                 boolean result = normalUrlContexts(request, urlContext, minimumPermissionRequired,
                         this.solutionDirectory, optionalParameters);
                 log(urlContext, result);
@@ -634,11 +709,13 @@ public class ResourceAuthenticator implements IResourceAuthenticator {
 
         if (isDefaultLookup(lookupParameters)) {//Expect directory and file name
             // configuration
+            logger.debug("default Lookup");
             return defaultContext(request, optionalParameters, minimumPermissionRequired, solutionDirectory,
                     lookupParameters);
         }
 
         if (isDirectoryLookup(lookupParameters)) {//Expect directory configuration
+            logger.debug("directory Lookup");
             return processDirectoryLookup(request, minimumPermissionRequired, solutionDirectory, lookupParameters,
                     optionalParameters);
         } else {
